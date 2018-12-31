@@ -30,7 +30,8 @@ class FeatureExtractor(object):
                 self.last_features = self.get_features(self.last_ob, reuse=True)
             self.next_features = tf.concat([self.features[:, 1:], self.last_features], 1)
 
-            self.ac = self.policy.ph_ac
+       #     self.ac = self.policy.ph_ac
+            self.ac = tf.stop_gradient(self.policy.ph_ac)
             self.scope = scope
 
             self.loss = self.get_loss()

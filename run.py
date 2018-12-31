@@ -34,6 +34,7 @@ def start_experiment(**args):
         logdir = logger.get_dir()
         print("results will be saved to ", logdir)
         trainer.train()
+        #train_writer = tf.summary.FileWriter('./tb_graph',tf_sess.graph)
 
 
 class Trainer(object):
@@ -116,6 +117,7 @@ class Trainer(object):
                 break
 
         self.agent.stop_interaction()
+
 
 
 def make_env_all_params(rank, add_monitor, args):

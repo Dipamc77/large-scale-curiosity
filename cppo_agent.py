@@ -55,6 +55,8 @@ class PpoOptimizer(object):
             entropy = tf.reduce_mean(self.stochpol.pd.entropy())
             vpred = self.stochpol.vpred
 
+ #           vf_loss = 0.5 * tf.reduce_mean((vpred - tf.stop_gradient(tf.negative(self.ph_ret))) ** 2)
+#            self.fw_loss = 0.5 * tf.reduce_mean((vpred - self.ph_ret) ** 2)
             vf_loss = 0.5 * tf.reduce_mean((vpred - self.ph_ret) ** 2)
             ratio = tf.exp(self.ph_oldnlp - neglogpac)  # p_new / p_old
             negadv = - self.ph_adv
@@ -67,6 +69,7 @@ class PpoOptimizer(object):
             clipfrac = tf.reduce_mean(tf.to_float(tf.abs(pg_losses2 - pg_loss_surr) > 1e-6))
 
             self.total_loss = pg_loss + ent_loss + vf_loss
+            #self.total_loss = pg_loss + ent_loss
             self.to_report = {'tot': self.total_loss, 'pg': pg_loss, 'vf': vf_loss, 'ent': entropy,
                               'approxkl': approxkl, 'clipfrac': clipfrac}
 
@@ -80,6 +83,9 @@ class PpoOptimizer(object):
             trainer = tf.train.AdamOptimizer(learning_rate=self.ph_lr)
         gradsandvars = trainer.compute_gradients(self.total_loss, params)
         self._train = trainer.apply_gradients(gradsandvars)
+        #gradsandvars_fw = trainer.compute_gradients(self.fw_loss, params)
+        #self._train = trainer.apply_gradients(gradsandvars_fw)
+
 
         if MPI.COMM_WORLD.Get_rank() == 0:
             getsess().run(tf.variables_initializer(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)))
@@ -131,6 +137,7 @@ class PpoOptimizer(object):
             delta = rews[:, t] + gamma * nextvals * nextnotnew - self.rollout.buf_vpreds[:, t]
             self.buf_advs[:, t] = lastgaelam = delta + gamma * lam * nextnotnew * lastgaelam
         self.buf_rets[:] = self.buf_advs + self.rollout.buf_vpreds
+        #self.buf_advs -= np.amax(self.buf_advs) # shift advantage to punishment, while keeping slope uphill
 
     def update(self):
         if self.normrew:
@@ -159,7 +166,8 @@ class PpoOptimizer(object):
         # normalize advantages
         if self.normadv:
             m, s = get_mean_and_std(self.buf_advs)
-            self.buf_advs = (self.buf_advs - m) / (s + 1e-7)
+            #self.buf_advs = (self.buf_advs - m) / (s + 1e-7)
+            self.buf_advs = (self.buf_advs) / (s + 1e-7)
         envsperbatch = (self.nenvs * self.nsegs_per_env) // self.nminibatches
         envsperbatch = max(1, envsperbatch)
         envinds = np.arange(self.nenvs * self.nsegs_per_env)

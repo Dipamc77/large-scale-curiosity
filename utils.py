@@ -71,15 +71,17 @@ def setup_mpi_gpus():
 
 
 def guess_available_cpus():
-    return int(multiprocessing.cpu_count())
+    return int(multiprocessing.cpu_count()/2)
 
 
 def setup_tensorflow_session():
     num_cpu = guess_available_cpus()
 
+    frac_gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
     tf_config = tf.ConfigProto(
         inter_op_parallelism_threads=num_cpu,
-        intra_op_parallelism_threads=num_cpu
+        intra_op_parallelism_threads=num_cpu,
+        gpu_options=frac_gpu_options
     )
     return tf.Session(config=tf_config)
 
